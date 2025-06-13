@@ -1,62 +1,61 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import cloudflareLogo from "./assets/Cloudflare_Logo.svg";
-import "./App.css";
+import { useRef } from "react";
+import DiceBox from "@3d-dice/dice-box";
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [name, setName] = useState("unknown");
+function App2() {
+  const container = useRef<HTMLDivElement>(null);
+  const diceBox = useRef<DiceBox>(null);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-        <a href="https://workers.cloudflare.com/" target="_blank">
-          <img
-            src={cloudflareLogo}
-            className="logo cloudflare"
-            alt="Cloudflare logo"
-          />
-        </a>
-      </div>
-      <h1>Vite + React + Cloudflare</h1>
-      <div className="card">
+    <div
+      id="dice-box-container"
+      className="h-full *:h-full *:w-[calc(100%-5px)] relative"
+      ref={(x) => {
+        if (!x || container.current === x) {
+          return;
+        }
+        container.current = x;
+        diceBox.current = new DiceBox({
+          assetPath: "/assets/",
+          container: "#dice-box-container",
+        });
+        diceBox.current.init().then(() => {
+          diceBox.current?.roll("2d20");
+        });
+      }}
+    >
+      <div className="absolute top-0 left-0 h-full w-full flex items-center justify-center">
         <button
-          onClick={() => setCount((count) => count + 1)}
-          aria-label="increment"
-        >
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <div className="card">
-        <button
+          className="bg-blue-500 text-white p-2 rounded"
+          type="button"
           onClick={() => {
-            fetch("/api/")
-              .then((res) => res.json() as Promise<{ name: string }>)
-              .then((data) => setName(data.name));
+            diceBox.current?.roll("2d20");
           }}
-          aria-label="get name"
         >
-          Name from API is: {name}
+          Roll 2d20
         </button>
-        <p>
-          Edit <code>worker/index.ts</code> to change the name
-        </p>
+        <button
+          className="bg-green-500 text-white p-2 rounded"
+          type="button"
+          onClick={() => {
+            diceBox.current?.add("1d6");
+          }}
+        >
+          Add 1d6
+        </button>
+        <button
+          className="bg-red-500 text-white p-2 rounded"
+          type="button"
+          onClick={() => {
+            diceBox.current?.remove(
+              diceBox.current?.getRollResults().flatMap((x) => x.rolls)[0]
+            );
+          }}
+        >
+          Remove
+        </button>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   );
 }
 
-export default App;
+export default App2;

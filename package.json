@@ -12,17 +12,22 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@3d-dice/dice-box": "^1.1.4",
+    "@tailwindcss/vite": "^4.1.10",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.10"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@cloudflare/vite-plugin": "^1.5.1",
     "@eslint/js": "^9.28.0",
+    "@types/pnpapi": "^0.0.5",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react-swc": "^3.10.2",
     "@yarnpkg/sdks": "^3.2.2",
+    "copy-dir": "^1.3.0",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
     "wrangler": "^4.19.2"
