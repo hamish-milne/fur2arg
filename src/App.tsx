@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import DiceBox from "@3d-dice/dice-box";
+import Story from "./story.mdx";
 
 function App2() {
   const container = useRef<HTMLDivElement>(null);
@@ -23,36 +24,41 @@ function App2() {
         });
       }}
     >
-      <div className="absolute top-0 left-0 h-full w-full flex items-center justify-center">
-        <button
-          className="bg-blue-500 text-white p-2 rounded"
-          type="button"
-          onClick={() => {
-            diceBox.current?.roll("2d20");
-          }}
-        >
-          Roll 2d20
-        </button>
-        <button
-          className="bg-green-500 text-white p-2 rounded"
-          type="button"
-          onClick={() => {
-            diceBox.current?.add("1d6");
-          }}
-        >
-          Add 1d6
-        </button>
-        <button
-          className="bg-red-500 text-white p-2 rounded"
-          type="button"
-          onClick={() => {
-            diceBox.current?.remove(
-              diceBox.current?.getRollResults().flatMap((x) => x.rolls)[0]
-            );
-          }}
-        >
-          Remove
-        </button>
+      <div className="absolute top-0 left-0 h-full w-full flex flex-col items-center justify-center gap-4">
+        <div className="flex gap-2 items-center justify-center">
+          <button
+            className="bg-blue-500 text-white p-2 rounded"
+            type="button"
+            onClick={() => {
+              diceBox.current?.roll("2d20");
+            }}
+          >
+            Roll 2d20
+          </button>
+          <button
+            className="bg-green-500 text-white p-2 rounded"
+            type="button"
+            onClick={() => {
+              diceBox.current?.add("1d6");
+            }}
+          >
+            Add 1d6
+          </button>
+          <button
+            className="bg-red-500 text-white p-2 rounded"
+            type="button"
+            onClick={() => {
+              diceBox.current?.remove(
+                diceBox.current?.getRollResults().flatMap((x) => x.rolls)[0]
+              );
+            }}
+          >
+            Remove
+          </button>
+        </div>
+        <div className="[&_h1]:text-2xl">
+          <Story />
+        </div>
       </div>
     </div>
   );

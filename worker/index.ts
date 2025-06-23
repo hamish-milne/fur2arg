@@ -1,12 +1,16 @@
+export { Game } from "./game";
+import type { Method } from "tiny-request-router";
+import { app } from "./app";
+import "./client-auth";
+
 export default {
   fetch(request) {
-    const url = new URL(request.url);
-
-    if (url.pathname.startsWith("/api/")) {
-      return Response.json({
-        name: "Cloudflare",
-      });
+    const { pathname } = new URL(request.url);
+    const match = app.match(request.method as Method, pathname);
+    if (match) {
+      const { handler, params } = match;
+      return handler(request, params);
     }
-    return new Response(null, { status: 404 });
+    return Response.json({ error: "Not Found" }, { status: 404 });
   },
 } satisfies ExportedHandler<Env>;
