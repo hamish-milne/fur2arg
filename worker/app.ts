@@ -1,31 +1,31 @@
 import { Hono, type Context, type Next } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import type { Client, Player } from "../common/api";
+import type { AuthScope, Client, Player } from "../common/api";
 import { validator } from "hono/validator";
-
-declare module "hono" {
-  interface ContextVariableMap {
-    sql: SqlStorage;
-    // id: string;
-  }
-}
+import { DurableObject } from "cloudflare:workers";
 
 const uuidPattern =
   /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/;
 
 const idPattern = /^[A-Z]{4}$/;
 
+type CEnv = {
+  Bindings: {
+    sql: SqlStorage;
+  } & Env;
+};
+
 function initSql(sql: SqlStorage) {
   sql.exec(`
     CREATE TABLE IF NOT EXISTS clients (
-      token TEXT PRIMARY KEY CHECK (token REGGEXP '${uuidPattern.source}'),
-      id TEXT NOT NULL UNIQUE CHECK (id REGEXP '${idPattern.source}'),
+      token TEXT PRIMARY KEY,
+      id TEXT NOT NULL UNIQUE,
       scope TEXT,
       createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      lastModified TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK
+      lastModified TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) STRICT, WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS players (
-      id TEXT PRIMARY KEY CHECK (id REGEXP '${uuidPattern.source}'),
+      id TEXT PRIMARY KEY,
       state BLOB,
       createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       lastModified TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -33,23 +33,27 @@ function initSql(sql: SqlStorage) {
     `);
 }
 
-function getClient(c: Context, token: string | undefined) {
+function getClient(
+  c: Context<CEnv>,
+  token: string | undefined,
+): { id: string; scope: AuthScope | null } | undefined {
   if (!token || !uuidPattern.test(token)) {
     return undefined;
   }
-  const cursor = c
-    .get("sql")
-    .exec<Pick<Client, "id" | "scope">>(
-      "SELECT id, scope FROM clients WHERE token = ?1",
-      token,
-    );
+  if (token === c.env.ROOT_TOKEN) {
+    return { id: "ROOT", scope: "admin" };
+  }
+  const cursor = c.env.sql.exec<Pick<Client, "id" | "scope">>(
+    "SELECT id, scope FROM clients WHERE token = ?1",
+    token,
+  );
   if (cursor.rowsRead === 0) {
     return undefined;
   }
   return cursor.one();
 }
 
-function getCurrentScope(c: Context) {
+function getCurrentScope(c: Context<CEnv>) {
   const token = getCookie(c, "token");
   if (!token) {
     return;
@@ -58,7 +62,7 @@ function getCurrentScope(c: Context) {
   return state?.scope;
 }
 
-async function verifyAdmin(c: Context, next: Next) {
+async function authAdmin(c: Context<CEnv>, next: Next) {
   const scope = getCurrentScope(c);
   if (scope !== "admin") {
     return c.json({ error: "Unauthorized" }, { status: 403 });
@@ -66,7 +70,7 @@ async function verifyAdmin(c: Context, next: Next) {
   return next();
 }
 
-async function verifyClient(c: Context, next: Next) {
+async function authClient(c: Context<CEnv>, next: Next) {
   const scope = getCurrentScope(c);
   if (!scope) {
     return c.json({ error: "Unauthorized" }, { status: 403 });
@@ -80,20 +84,20 @@ function generateClientId(): string {
   return String.fromCharCode(...arr.map((x) => (x % 26) + offset));
 }
 
-const clientIdValidator = validator("param", (input, c) => {
+const clientIdValidator = validator("param", (input: { id: string }, c) => {
   const { id } = input;
   if (!idPattern.test(id)) {
     return c.json({ error: "Invalid client ID" }, { status: 400 });
   }
-  return id;
+  return input;
 });
 
-const playerIdValidator = validator("param", (input, c) => {
+const playerIdValidator = validator("param", (input: { id: string }, c) => {
   const { id } = input;
   if (!uuidPattern.test(id)) {
     return c.json({ error: "Invalid player ID" }, { status: 400 });
   }
-  return id;
+  return input;
 });
 
 const playerBodyValidator = validator("json", (x: Pick<Player, "state">, c) => {
@@ -113,17 +117,17 @@ const clientBodyValidator = validator("json", (x: Pick<Client, "scope">, c) => {
   return x;
 });
 
-const app = new Hono()
+// NOTE: All response data must be cast to a fixed-structure type without an index signature,
+// so no Pick<,> or Omit<,> or the like.
+export const app = new Hono<CEnv>()
   .basePath("/api")
-  .use("/client/:id", verifyAdmin)
-  .use("/players/:id", verifyClient)
-  .get("/clients/all", verifyAdmin, (c) => {
-    const data = c
-      .get("sql")
+  .get("/clients/all", authAdmin, (c) => {
+    const clients = c.env.sql
       .exec<Pick<Client, keyof Client>>(
         "SELECT id, scope, createdAt, lastModified FROM clients ORDER BY createdAt DESC",
       )
       .toArray();
+    const data: Client[] = clients;
     return c.json({ data });
   })
   .get("/clients/me", async (c) => {
@@ -142,108 +146,135 @@ const app = new Hono()
     }
     for (let i = 0; i < 1000; i++) {
       const id = generateClientId();
-      const { rowsWritten } = c
-        .get("sql")
-        .exec("INSERT INTO clients (token, id) VALUES (?1, ?2)", token, id);
+      const { rowsWritten } = c.env.sql.exec(
+        "INSERT INTO clients (token, id) VALUES (?1, ?2)",
+        token,
+        id,
+      );
       if (rowsWritten > 0) {
-        return c.json({ data: { id } });
+        return c.json({ data: { id, scope: null } });
       }
     }
-    throw new Error("Unable to create client");
+    return c.json({ error: "Unable to create client" }, { status: 500 });
   })
-  .get("/client/:id", clientIdValidator, (c) => {
-    const cursor = c
-      .get("sql")
-      .exec<Pick<Client, keyof Client>>(
-        "SELECT id, scope, createdAt, lastModified FROM clients WHERE id = ?1",
-        c.req.valid("param"),
-      );
+  .get("/client/:id", clientIdValidator, function foo(c) {
+    const cursor = c.env.sql.exec<Pick<Client, keyof Client>>(
+      "SELECT id, scope, createdAt, lastModified FROM clients WHERE id = ?1",
+      c.req.valid("param").id,
+    );
     if (cursor.rowsRead === 0) {
       return c.json({ error: "Client not found" }, { status: 404 });
     }
-    return c.json({ data: cursor.one() });
+    const data: Client = cursor.one();
+    return c.json({ data: data }, { status: 200 });
   })
-  .patch("/client/:id", clientIdValidator, clientBodyValidator, async (c) => {
-    const { scope } = c.req.valid("json");
-    const { rowsWritten } = c
-      .get("sql")
-      .exec(
+  .patch(
+    "/client/:id",
+    authAdmin,
+    clientIdValidator,
+    clientBodyValidator,
+    async (c) => {
+      const { scope } = c.req.valid("json");
+      const { rowsWritten } = c.env.sql.exec(
         "UPDATE clients SET scope = ?1 WHERE id = ?2",
         scope,
-        c.req.valid("param"),
+        c.req.valid("param").id,
       );
+      if (rowsWritten === 0) {
+        return c.json({ error: "Client not found" }, { status: 404 });
+      }
+      return c.json({ success: true });
+    },
+  )
+  .delete("/client/:id", authAdmin, clientIdValidator, (c) => {
+    const { rowsWritten } = c.env.sql.exec(
+      "DELETE FROM clients WHERE id = ?1",
+      c.req.valid("param").id,
+    );
     if (rowsWritten === 0) {
       return c.json({ error: "Client not found" }, { status: 404 });
     }
     return c.json({ success: true });
   })
-  .delete("/client/:id", clientIdValidator, (c) => {
-    const { rowsWritten } = c
-      .get("sql")
-      .exec("DELETE FROM clients WHERE id = ?1", c.req.valid("param"));
-    if (rowsWritten === 0) {
-      return c.json({ error: "Client not found" }, { status: 404 });
-    }
-    return c.json({ success: true });
-  })
-  .get("/players/all", verifyAdmin, async (c) => {
-    const data = c
-      .get("sql")
+  .get("/players/all", authAdmin, async (c) => {
+    const players = c.env.sql
       .exec<Pick<Player, "id" | "createdAt" | "lastModified">>(
         "SELECT id, createdAt, lastModified FROM players ORDER BY lastModified DESC",
       )
       .toArray();
+    const data: { id: string; createdAt: string; lastModified: string }[] =
+      players;
     return c.json({ data });
   })
-  .get("/player/:id", playerIdValidator, (c) => {
-    const cursor = c
-      .get("sql")
-      .exec<Omit<Player, "state"> & { state: string }>(
-        "SELECT id, createdAt, lastModified, json(state) AS state FROM players WHERE id = ?1",
-        c.req.valid("param"),
-      );
+  .get("/player/:id", authClient, playerIdValidator, (c) => {
+    const cursor = c.env.sql.exec<Omit<Player, "state"> & { state: string }>(
+      "SELECT id, createdAt, lastModified, json(state) AS state FROM players WHERE id = ?1",
+      c.req.valid("param").id,
+    );
     if (cursor.rowsRead === 0) {
       return c.json({ error: "Player not found" }, { status: 404 });
     }
     const player = cursor.one();
-    return c.json({ data: { ...player, state: JSON.parse(player.state) } });
+    const data: Player = {
+      ...player,
+      state: JSON.parse(player.state),
+    };
+    return c.json({ data: data });
   })
-  .post("/player/:id", playerIdValidator, playerBodyValidator, async (c) => {
-    const { state } = c.req.valid("json");
-    const cursor = c
-      .get("sql")
-      .exec(
+  .post(
+    "/player/:id",
+    authClient,
+    playerIdValidator,
+    playerBodyValidator,
+    async (c) => {
+      const { state } = c.req.valid("json");
+      const cursor = c.env.sql.exec(
         "INSERT INTO players (id, state) VALUES (?1, jsonb(?2))",
-        c.req.valid("param"),
+        c.req.valid("param").id,
         JSON.stringify(state),
       );
-    if (cursor.rowsWritten === 0) {
-      return c.json({ error: "Unable to create player" }, { status: 500 });
-    }
-    return c.json({ success: true });
-  })
-  .patch("/player/:id", playerIdValidator, playerBodyValidator, async (c) => {
-    const { state } = c.req.valid("json");
-    const cursor = c
-      .get("sql")
-      .exec(
+      if (cursor.rowsWritten === 0) {
+        return c.json({ error: "Unable to create player" }, { status: 500 });
+      }
+      return c.json({ success: true });
+    },
+  )
+  .patch(
+    "/player/:id",
+    authClient,
+    playerIdValidator,
+    playerBodyValidator,
+    async (c) => {
+      const { state } = c.req.valid("json");
+      const cursor = c.env.sql.exec(
         "UPDATE players SET state = jsonb_patch(state, ?1), lastModified = CURRENT_TIMESTAMP WHERE id = ?2",
         JSON.stringify(state),
-        c.req.valid("param"),
+        c.req.valid("param").id,
       );
-    if (cursor.rowsWritten === 0) {
-      return c.json({ error: "Player not found" }, { status: 404 });
-    }
-    return c.json({ success: true });
-  })
-  .delete("/player/:id", verifyAdmin, playerIdValidator, (c) => {
-    const cursor = c
-      .get("sql")
-      .exec("DELETE FROM players WHERE id = ?1", c.req.valid("param"));
+      if (cursor.rowsWritten === 0) {
+        return c.json({ error: "Player not found" }, { status: 404 });
+      }
+      return c.json({ success: true });
+    },
+  )
+  .delete("/player/:id", authAdmin, playerIdValidator, (c) => {
+    const cursor = c.env.sql.exec(
+      "DELETE FROM players WHERE id = ?1",
+      c.req.valid("param").id,
+    );
     if (cursor.rowsWritten === 0) {
       return c.json({ error: "Player not found" }, { status: 404 });
     }
     return c.json({ success: true });
   });
 
-export { app };
+export class AppDO extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    initSql(ctx.storage.sql);
+  }
+
+  override fetch(request: Request) {
+    return app.fetch(request, { ...this.env, sql: this.ctx.storage.sql });
+  }
+}

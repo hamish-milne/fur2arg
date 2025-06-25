@@ -17,7 +17,8 @@
       "node_modules",
       "dist",
       ".yarn",
-      "worker-configuration.d.ts"
+      "worker-configuration.d.ts",
+      ".vscode/extensions.json"
     ]
   },
   "overrides": [

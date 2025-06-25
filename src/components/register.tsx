@@ -1,6 +1,3 @@
-import { useApiGet } from "../hooks";
-import { useEffect } from "react";
-
 export function Register(props: { code: string; visible: boolean }) {
   const { code, visible } = props;
   return (

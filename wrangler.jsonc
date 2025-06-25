@@ -6,7 +6,7 @@
   "$schema": ".yarn/unplugged/wrangler-virtual-670a52ec49/node_modules/wrangler/config-schema.json",
   "name": "fur2arg",
   "main": "worker/index.ts",
-  "compatibility_date": "2025-06-12",
+  "compatibility_date": "2025-06-04",
   "assets": {
     "not_found_handling": "single-page-application"
   },
@@ -28,15 +28,15 @@
   "durable_objects": {
     "bindings": [
       {
-        "name": "GAME",
-        "class_name": "Game"
+        "name": "APP",
+        "class_name": "AppDO"
       }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["Game"]
+      "new_sqlite_classes": ["AppDO"]
     }
   ]
 
