@@ -117,15 +117,25 @@ const clientBodyValidator = validator("json", (x: Pick<Client, "scope">, c) => {
   return x;
 });
 
+function sqlDate(col: string) {
+  return `strftime('%Y-%m-%dT%H:%M:%fZ', ${col}) AS ${col}`;
+}
+
+const getClients = `SELECT id, scope, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} FROM clients ORDER BY createdAt DESC`;
+
+const getClientById = `SELECT id, scope, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} FROM clients WHERE id = ?1`;
+
+const getPlayers = `SELECT id, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} FROM players ORDER BY lastModified DESC`;
+
+const getPlayerById = `SELECT id, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} json(state) AS state FROM players WHERE id = ?1`;
+
 // NOTE: All response data must be cast to a fixed-structure type without an index signature,
 // so no Pick<,> or Omit<,> or the like.
 export const app = new Hono<CEnv>()
   .basePath("/api")
   .get("/clients/all", authAdmin, (c) => {
     const clients = c.env.sql
-      .exec<Pick<Client, keyof Client>>(
-        "SELECT id, scope, createdAt, lastModified FROM clients ORDER BY createdAt DESC",
-      )
+      .exec<Pick<Client, keyof Client>>(getClients)
       .toArray();
     const data: Client[] = clients;
     return c.json({ data });
@@ -142,6 +152,7 @@ export const app = new Hono<CEnv>()
         httpOnly: true,
         secure: true,
         sameSite: "strict",
+        maxAge: 60 * 60 * 24 * 365,
       });
     }
     for (let i = 0; i < 1000; i++) {
@@ -159,7 +170,7 @@ export const app = new Hono<CEnv>()
   })
   .get("/client/:id", clientIdValidator, function foo(c) {
     const cursor = c.env.sql.exec<Pick<Client, keyof Client>>(
-      "SELECT id, scope, createdAt, lastModified FROM clients WHERE id = ?1",
+      getClientById,
       c.req.valid("param").id,
     );
     if (cursor.rowsRead === 0) {
@@ -198,9 +209,7 @@ export const app = new Hono<CEnv>()
   })
   .get("/players/all", authAdmin, async (c) => {
     const players = c.env.sql
-      .exec<Pick<Player, "id" | "createdAt" | "lastModified">>(
-        "SELECT id, createdAt, lastModified FROM players ORDER BY lastModified DESC",
-      )
+      .exec<Pick<Player, "id" | "createdAt" | "lastModified">>(getPlayers)
       .toArray();
     const data: { id: string; createdAt: string; lastModified: string }[] =
       players;
@@ -208,7 +217,7 @@ export const app = new Hono<CEnv>()
   })
   .get("/player/:id", authClient, playerIdValidator, (c) => {
     const cursor = c.env.sql.exec<Omit<Player, "state"> & { state: string }>(
-      "SELECT id, createdAt, lastModified, json(state) AS state FROM players WHERE id = ?1",
+      getPlayerById,
       c.req.valid("param").id,
     );
     if (cursor.rowsRead === 0) {

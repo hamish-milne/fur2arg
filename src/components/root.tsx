@@ -1,4 +1,5 @@
 import { api, useApiGet } from "../hooks";
+import { Admin } from "./admin";
 import { Register } from "./register";
 
 export function Root() {
@@ -11,6 +12,7 @@ export function Root() {
   return (
     <div className="h-full w-full relative">
       <Register code={id || ""} visible={Boolean(id && !scope)} />
+      <Admin visible={Boolean(scope === "admin")} />
       <div className="absolute bottom-0 left-0">{id || "No ID"}</div>
     </div>
   );
