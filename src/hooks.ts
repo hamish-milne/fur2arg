@@ -20,12 +20,18 @@ export const api = hc<typeof app>("https://localhost/", {
   },
 }).api;
 
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+type TAny = any;
+
+// biome-ignore lint/suspicious/noConfusingVoidType: <explanation>
+type TVoid = void;
+
 type RouteParam<TArgs> = TArgs extends { param: Record<infer TParam, string> }
   ? { param: Record<TParam, string> }
-  : { param: undefined };
+  : { param: TVoid };
 type RouteBody<TArgs> = TArgs extends { json: infer TBody }
   ? { body: TBody }
-  : { body: undefined };
+  : { body: TVoid };
 
 type RouteTypes<TMethod extends string, TRoute> = TRoute extends {
   [_ in TMethod]: (
@@ -34,9 +40,6 @@ type RouteTypes<TMethod extends string, TRoute> = TRoute extends {
 }
   ? RouteParam<TArgs> & RouteBody<TArgs> & { response: TResponse }
   : never;
-
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-type TAny = any;
 
 export function useApiGet<
   TRoute extends {
@@ -53,10 +56,7 @@ export function useApiGet<
 ) {
   return useQuery({
     ...options,
-    queryKey: [
-      route.$url(args).pathname,
-      ...(args ? Object.entries(args).flat(1) : []),
-    ],
+    queryKey: [route.$url(args).toString()],
     queryFn: () =>
       route.$get(args).then((x) => x.json()) as Promise<
         RouteTypes<"$get", TRoute>["response"]
@@ -64,56 +64,30 @@ export function useApiGet<
   });
 }
 
-export function useApiPatch<
+export function useApiAction<
+  TMethod extends "$patch" | "$post" | "$put" | "$delete",
   TRoute extends {
     $url: (args: TAny) => URL;
-    $patch: (args: TAny) => Promise<{ json(): Promise<unknown> }>;
-  },
+  } & { [_ in TMethod]: (args: TAny) => Promise<{ json(): Promise<unknown> }> },
 >(
   route: TRoute,
-  args: RouteTypes<"$patch", TRoute>["param"],
+  method: TMethod,
+  args: RouteTypes<TMethod, TRoute>["param"],
   options?: Omit<
     UseMutationOptions<
-      RouteTypes<"$patch", TRoute>["response"],
+      RouteTypes<TMethod, TRoute>["response"],
       Error,
-      RouteTypes<"$patch", TRoute>["body"]
+      RouteTypes<TMethod, TRoute>["body"]
     >,
     "mutationFn" | "mutationKey"
   >,
 ) {
   return useMutation({
     ...options,
-    mutationKey: [
-      route.$url(args).pathname,
-      ...(args ? Object.entries(args).flat(1) : []),
-    ],
-    mutationFn: (body) => route.$patch({ param: args, json: body }),
-  });
-}
-
-type ActionResponse<TAction> = TAction extends (
-  args: TAny,
-) => Promise<{ json(): Promise<infer TResponse> }>
-  ? TResponse
-  : never;
-
-export function useApiAction<
-  TAction extends (args: TAny) => Promise<{ json(): Promise<TAny> }>,
->(
-  action: TAction,
-  key: string,
-  options?: Omit<
-    UseMutationOptions<
-      InferResponseType<TAction>,
-      Error,
-      ActionResponse<TAction>
-    >,
-    "mutationFn" | "mutationKey"
-  >,
-) {
-  return useMutation({
-    ...options,
-    mutationKey: [key],
-    mutationFn: (req) => action(req).then((x) => x.json()),
+    mutationKey: [route.$url(args).toString(), method],
+    mutationFn: (body) =>
+      route[method]({ param: args, json: body }).then((x) =>
+        x.json(),
+      ) as Promise<RouteTypes<TMethod, TRoute>["response"]>,
   });
 }

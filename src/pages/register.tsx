@@ -1,4 +1,4 @@
-import { Overlay } from "./overlay";
+import { Overlay } from "../components/overlay";
 
 export function Register(props: { code: string; visible: boolean }) {
   const { code, visible } = props;

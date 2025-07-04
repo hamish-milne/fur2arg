@@ -1,8 +1,23 @@
 import { Hono, type Context, type Next } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import type { AuthScope, Client, Player } from "../common/api";
 import { validator } from "hono/validator";
 import { DurableObject } from "cloudflare:workers";
+
+export type AuthScope = "admin" | `room-${string}`;
+
+export interface Player {
+  id: string;
+  state: Record<string, string | number | boolean>;
+  created: string;
+  modified: string;
+}
+
+export interface Client {
+  id: string;
+  scope: AuthScope | null;
+  created: string;
+  modified: string;
+}
 
 const uuidPattern =
   /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/;
@@ -21,14 +36,14 @@ function initSql(sql: SqlStorage) {
       token TEXT PRIMARY KEY,
       id TEXT NOT NULL UNIQUE,
       scope TEXT,
-      createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      lastModified TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      modified TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) STRICT, WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS players (
       id TEXT PRIMARY KEY,
       state BLOB,
-      createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      lastModified TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      modified TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) STRICT, WITHOUT ROWID;
     `);
 }
@@ -121,13 +136,13 @@ function sqlDate(col: string) {
   return `strftime('%Y-%m-%dT%H:%M:%fZ', ${col}) AS ${col}`;
 }
 
-const getClients = `SELECT id, scope, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} FROM clients ORDER BY createdAt DESC`;
+const getClients = `SELECT id, scope, ${sqlDate("created")}, ${sqlDate("modified")} FROM clients ORDER BY created DESC`;
 
-const getClientById = `SELECT id, scope, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} FROM clients WHERE id = ?1`;
+const getClientById = `SELECT id, scope, ${sqlDate("created")}, ${sqlDate("modified")} FROM clients WHERE id = ?1`;
 
-const getPlayers = `SELECT id, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} FROM players ORDER BY lastModified DESC`;
+const getPlayers = `SELECT id, ${sqlDate("created")}, ${sqlDate("modified")} FROM players ORDER BY modified DESC`;
 
-const getPlayerById = `SELECT id, ${sqlDate("createdAt")}, ${sqlDate("lastModified")} json(state) AS state FROM players WHERE id = ?1`;
+const getPlayerById = `SELECT id, ${sqlDate("created")}, ${sqlDate("modified")} json(state) AS state FROM players WHERE id = ?1`;
 
 // NOTE: All response data must be cast to a fixed-structure type without an index signature,
 // so no Pick<,> or Omit<,> or the like.
@@ -209,10 +224,9 @@ export const app = new Hono<CEnv>()
   })
   .get("/players/all", authAdmin, async (c) => {
     const players = c.env.sql
-      .exec<Pick<Player, "id" | "createdAt" | "lastModified">>(getPlayers)
+      .exec<Pick<Player, "id" | "created" | "modified">>(getPlayers)
       .toArray();
-    const data: { id: string; createdAt: string; lastModified: string }[] =
-      players;
+    const data: { id: string; created: string; modified: string }[] = players;
     return c.json({ data });
   })
   .get("/player/:id", authClient, playerIdValidator, (c) => {
@@ -256,7 +270,7 @@ export const app = new Hono<CEnv>()
     async (c) => {
       const { state } = c.req.valid("json");
       const cursor = c.env.sql.exec(
-        "UPDATE players SET state = jsonb_patch(state, ?1), lastModified = CURRENT_TIMESTAMP WHERE id = ?2",
+        "UPDATE players SET state = jsonb_patch(state, ?1), modified = CURRENT_TIMESTAMP WHERE id = ?2",
         JSON.stringify(state),
         c.req.valid("param").id,
       );
