@@ -183,7 +183,7 @@ export const app = new Hono<CEnv>()
     }
     return c.json({ error: "Unable to create client" }, { status: 500 });
   })
-  .get("/client/:id", clientIdValidator, function foo(c) {
+  .get("/client/:id", authAdmin, clientIdValidator, function foo(c) {
     const cursor = c.env.sql.exec<Pick<Client, keyof Client>>(
       getClientById,
       c.req.valid("param").id,
