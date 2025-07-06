@@ -4,7 +4,7 @@ import {
   type UseMutationOptions,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import { hc, type InferResponseType } from "hono/client";
+import { hc } from "hono/client";
 import type { app } from "../worker/app";
 
 // We need to put a baseUrl here, then strip it out at the end, so that the $url method works.
@@ -30,8 +30,8 @@ type RouteParam<TArgs> = TArgs extends { param: Record<infer TParam, string> }
   ? { param: Record<TParam, string> }
   : { param: TVoid };
 type RouteBody<TArgs> = TArgs extends { json: infer TBody }
-  ? { body: TBody }
-  : { body: TVoid };
+  ? { json: TBody }
+  : { json: TVoid };
 
 type RouteTypes<TMethod extends string, TRoute> = TRoute extends {
   [_ in TMethod]: (
@@ -48,7 +48,7 @@ export function useApiGet<
   },
 >(
   route: TRoute,
-  args: RouteTypes<"$get", TRoute>["param"],
+  param: RouteTypes<"$get", TRoute>["param"],
   options?: Omit<
     UseQueryOptions<RouteTypes<"$get", TRoute>["response"]>,
     "queryKey" | "queryFn"
@@ -56,9 +56,9 @@ export function useApiGet<
 ) {
   return useQuery({
     ...options,
-    queryKey: [route.$url(args).toString()],
+    queryKey: [route.$url({ param }).toString()],
     queryFn: () =>
-      route.$get(args).then((x) => x.json()) as Promise<
+      route.$get({ param }).then((x) => x.json()) as Promise<
         RouteTypes<"$get", TRoute>["response"]
       >,
   });
@@ -72,22 +72,49 @@ export function useApiAction<
 >(
   route: TRoute,
   method: TMethod,
-  args: RouteTypes<TMethod, TRoute>["param"],
+  param: RouteTypes<TMethod, TRoute>["param"],
   options?: Omit<
     UseMutationOptions<
       RouteTypes<TMethod, TRoute>["response"],
       Error,
-      RouteTypes<TMethod, TRoute>["body"]
+      RouteTypes<TMethod, TRoute>["json"]
     >,
     "mutationFn" | "mutationKey"
   >,
 ) {
   return useMutation({
     ...options,
-    mutationKey: [route.$url(args).toString(), method],
+    mutationKey: [route.$url({ param }).toString(), method],
+    mutationFn: (json) =>
+      route[method]({ param, json }).then((x) => x.json()) as Promise<
+        RouteTypes<TMethod, TRoute>["response"]
+      >,
+  });
+}
+
+export function useApiBulkAction<
+  TMethod extends "$patch" | "$post" | "$put" | "$delete",
+  TRoute extends {
+    $url: (args: TAny) => URL;
+  } & { [_ in TMethod]: (args: TAny) => Promise<{ json(): Promise<unknown> }> },
+>(
+  route: TRoute,
+  method: TMethod,
+  options?: Omit<
+    UseMutationOptions<
+      RouteTypes<TMethod, TRoute>["response"][],
+      Error,
+      Pick<RouteTypes<TMethod, TRoute>, "param" | "json">[]
+    >,
+    "mutationFn" | "mutationKey"
+  >,
+) {
+  return useMutation({
+    ...options,
+    mutationKey: [route.$url({}), method],
     mutationFn: (body) =>
-      route[method]({ param: args, json: body }).then((x) =>
-        x.json(),
-      ) as Promise<RouteTypes<TMethod, TRoute>["response"]>,
+      Promise.all(
+        body.map((x) => route[method](x).then((y) => y.json())),
+      ) as Promise<RouteTypes<TMethod, TRoute>["response"][]>,
   });
 }

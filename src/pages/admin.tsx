@@ -3,7 +3,12 @@ import { api, useApiAction, useApiGet } from "../hooks";
 import { Overlay } from "../components/overlay";
 import { intervalToDuration } from "date-fns/intervalToDuration";
 import { Table } from "../components/table";
-import { Button, IconButton } from "../components/input";
+import {
+  Button,
+  Checkbox,
+  CircularProgress,
+  IconButton,
+} from "../components/input";
 
 const formatDuration = new Intl.RelativeTimeFormat(window.navigator.language);
 
@@ -43,11 +48,13 @@ function Clients(props: { visible: boolean }) {
   return (
     <Table
       rows={clientsList.data?.data || []}
-      columns={["id", "scope", "created", "modified", "actions"]}
+      columns={["select", "id", "scope", "created", "modified", "actions"]}
       rowKey="id"
       caption="Clients"
       head={({ column }) => {
         switch (column) {
+          case "select":
+            return "";
           case "id":
             return "Client ID";
           case "scope":
@@ -62,6 +69,8 @@ function Clients(props: { visible: boolean }) {
       }}
       cell={({ row, column }) => {
         switch (column) {
+          case "select":
+            return <Checkbox />;
           case "id":
           case "scope":
             return row[column];
@@ -129,7 +138,7 @@ function ClientActions(props: { id: string }) {
   const { id } = props;
 
   const deleteClient = useApiAction(api.client[":id"], "$delete", { id });
-
+  //  ❌
   return (
     <IconButton
       onClick={() => deleteClient.mutate()}
