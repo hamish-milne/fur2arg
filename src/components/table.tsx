@@ -1,18 +1,22 @@
+import type { ReactNode } from "react";
+
 export function Table<TRow, TCol extends string>(props: {
   rowKey: keyof TRow;
-  rows: TRow[];
-  columns: [TCol, ...TCol[]];
-  caption?: string;
-  head(props: { column: TCol }): React.ReactNode;
-  cell(props: { row: TRow; column: TCol }): React.ReactNode;
-  empty(): React.ReactNode;
+  rows: readonly TRow[];
+  columns: readonly [TCol, ...TCol[]];
+  Caption?: () => ReactNode;
+  head(props: { column: TCol }): ReactNode;
+  cell(props: { row: TRow; column: TCol }): ReactNode;
+  empty(): ReactNode;
 }) {
-  const { rowKey, rows, columns, caption, head, cell, empty } = props;
+  const { rowKey, rows, columns, Caption, head, cell, empty } = props;
 
   return (
     <table className="table-auto border-collapse border border-gray-300">
-      {caption && (
-        <caption className="text-lg font-semibold mb-2">{caption}</caption>
+      {Caption && (
+        <caption className="text-lg font-semibold mb-2 caption-top">
+          <Caption />
+        </caption>
       )}
       <thead className="bg-gray-200">
         <tr>
@@ -27,7 +31,7 @@ export function Table<TRow, TCol extends string>(props: {
         {rows.map((row) => (
           <tr
             key={String(row[rowKey])}
-            className="hover:bg-gray-100 transition-all duration-200 ease-in-out"
+            className="hover:bg-gray-100 transition-all"
           >
             {columns.map((column) => (
               <td key={String(column)} className="px-4 py-2">

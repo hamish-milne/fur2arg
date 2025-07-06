@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { hc } from "hono/client";
 import type { app } from "../worker/app";
+export type { AuthScope, Player, Client } from "../worker/app";
 
 // We need to put a baseUrl here, then strip it out at the end, so that the $url method works.
 export const api = hc<typeof app>("https://localhost/", {

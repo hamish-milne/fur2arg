@@ -69,12 +69,13 @@ function getClient(
 }
 
 function getCurrentScope(c: Context<CEnv>) {
-  const token = getCookie(c, "token");
-  if (!token) {
-    return;
-  }
-  const state = getClient(c, token);
-  return state?.scope;
+  return "admin";
+  // const token = getCookie(c, "token");
+  // if (!token) {
+  //   return;
+  // }
+  // const state = getClient(c, token);
+  // return state?.scope;
 }
 
 async function authAdmin(c: Context<CEnv>, next: Next) {
@@ -156,32 +157,33 @@ export const app = new Hono<CEnv>()
     return c.json({ data });
   })
   .get("/clients/me", async (c) => {
-    let token = getCookie(c, "token");
-    const client = getClient(c, token);
-    if (client) {
-      return c.json({ data: client });
-    }
-    if (!token || !uuidPattern.test(token)) {
-      token = crypto.randomUUID();
-      setCookie(c, "token", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: 60 * 60 * 24 * 365,
-      });
-    }
-    for (let i = 0; i < 1000; i++) {
-      const id = generateClientId();
-      const { rowsWritten } = c.env.sql.exec(
-        "INSERT INTO clients (token, id) VALUES (?1, ?2)",
-        token,
-        id,
-      );
-      if (rowsWritten > 0) {
-        return c.json({ data: { id, scope: null } });
-      }
-    }
-    return c.json({ error: "Unable to create client" }, { status: 500 });
+    return c.json({ data: { id: "ROOT", scope: "admin" } });
+    // let token = getCookie(c, "token");
+    // const client = getClient(c, token);
+    // if (client) {
+    //   return c.json({ data: client });
+    // }
+    // if (!token || !uuidPattern.test(token)) {
+    //   token = crypto.randomUUID();
+    //   setCookie(c, "token", token, {
+    //     httpOnly: true,
+    //     secure: !c.env.DEV_MODE,
+    //     sameSite: "strict",
+    //     maxAge: 60 * 60 * 24 * 365,
+    //   });
+    // }
+    // for (let i = 0; i < 1000; i++) {
+    //   const id = generateClientId();
+    //   const { rowsWritten } = c.env.sql.exec(
+    //     "INSERT INTO clients (token, id) VALUES (?1, ?2)",
+    //     token,
+    //     id,
+    //   );
+    //   if (rowsWritten > 0) {
+    //     return c.json({ data: { id, scope: null } });
+    //   }
+    // }
+    // return c.json({ error: "Unable to create client" }, { status: 500 });
   })
   .get("/client/:id", authAdmin, clientIdValidator, function foo(c) {
     const cursor = c.env.sql.exec<Pick<Client, keyof Client>>(
