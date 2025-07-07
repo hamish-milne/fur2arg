@@ -4,7 +4,7 @@ import { Overlay } from "../components/overlay";
 import { intervalToDuration } from "date-fns/intervalToDuration";
 import { Table } from "../components/table";
 import { Checkbox, LoadingButton, Select } from "../components/input";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 
 const formatDuration = new Intl.RelativeTimeFormat(window.navigator.language);
@@ -45,24 +45,31 @@ function Clients(props: { visible: boolean }) {
   });
   console.log(form.formState);
 
-  const clientsList = useApiGet(api.clients.all, undefined, {
+  const { data: clients } = useApiGet(api.clients.all, undefined, {
     enabled: visible,
     // refetchInterval: 5000,
   });
 
-  const updateClients = useApiBulkAction(api.client[":id"], "$patch");
-  const deleteClients = useApiBulkAction(api.client[":id"], "$delete");
-  const isPending = updateClients.isPending || deleteClients.isPending;
+  const { mutate: doUpdate, isPending: updatePending } = useApiBulkAction(
+    api.client[":id"],
+    "$patch"
+  );
+  const { mutate: doDelete, isPending: deletePending } = useApiBulkAction(
+    api.client[":id"],
+    "$delete"
+  );
+  const isPending = updatePending || deletePending;
+
+  const selected = form.watch("selected");
+  const disabled = selected?.length === 0;
 
   return (
     <Table
-      rows={clientsList.data?.data || []}
+      rows={clients?.data || []}
       columns={ClientColumns}
       rowKey="id"
-      Caption={useCallback(() => {
-        const selected = form.watch("selected");
-        const disabled = selected?.length === 0;
-        return (
+      caption={useMemo(
+        () => (
           <div className="w-full flex items-center gap-2 text-start pl-2">
             <div className="flex-1">Clients</div>
             <Select
@@ -88,9 +95,10 @@ function Clients(props: { visible: boolean }) {
               Delete
             </LoadingButton>
           </div>
-        );
-      }, [form, isPending])}
-      head={useCallback(
+        ),
+        [form, disabled, isPending]
+      )}
+      Head={useCallback(
         ({ column }) => {
           switch (column) {
             case "select":
@@ -101,9 +109,7 @@ function Clients(props: { visible: boolean }) {
                     const { checked } = e.target;
                     form.setValue(
                       "selected",
-                      checked
-                        ? clientsList.data?.data.map((x) => x.id) || []
-                        : []
+                      checked ? clients?.data.map((x) => x.id) || [] : []
                     );
                   }}
                 />
@@ -118,9 +124,9 @@ function Clients(props: { visible: boolean }) {
               return "Last Modified";
           }
         },
-        [form, clientsList]
+        [form, clients]
       )}
-      cell={useCallback(
+      Cell={useCallback(
         ({ row, column }) => {
           switch (column) {
             case "select":
@@ -142,7 +148,7 @@ function Clients(props: { visible: boolean }) {
         },
         [form]
       )}
-      empty={useCallback(() => "No clients found", [])}
+      empty="No clients found"
     />
   );
 }
@@ -158,8 +164,8 @@ function Players(props: { visible: boolean }) {
       rows={playersList.data?.data || []}
       columns={["id", "created", "modified"]}
       rowKey="id"
-      Caption={() => "Players"}
-      head={({ column }) => {
+      caption="Players"
+      Head={({ column }) => {
         switch (column) {
           case "id":
             return "Player ID";
@@ -169,7 +175,7 @@ function Players(props: { visible: boolean }) {
             return "Last Modified";
         }
       }}
-      cell={({ row, column }) => {
+      Cell={({ row, column }) => {
         switch (column) {
           case "id":
           case "created":
@@ -177,7 +183,7 @@ function Players(props: { visible: boolean }) {
             return formatDateRelative(row[column]);
         }
       }}
-      empty={() => "No players found"}
+      empty="No players found"
     />
   );
 }
