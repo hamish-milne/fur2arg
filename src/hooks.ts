@@ -1,4 +1,5 @@
 import {
+  type QueryClient,
   useMutation,
   useQuery,
   type UseMutationOptions,
@@ -62,6 +63,20 @@ export function useApiGet<
       route.$get({ param }).then((x) => x.json()) as Promise<
         RouteTypes<"$get", TRoute>["response"]
       >,
+  });
+}
+
+export function invalidate<
+  TRoute extends {
+    $url: (args: TAny) => URL;
+  },
+>(
+  queryClient: QueryClient,
+  route: TRoute,
+  param?: RouteTypes<"$get", TRoute>["param"],
+) {
+  return queryClient.invalidateQueries({
+    queryKey: [route.$url({ param }).toString()],
   });
 }
 

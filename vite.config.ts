@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import mdx from "@mdx-js/rollup";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
 import { cloudflare } from "@cloudflare/vite-plugin";
 
@@ -12,5 +13,6 @@ export default defineConfig({
     tailwindcss(),
     react(),
     cloudflare(),
+    basicSsl(),
   ],
 });

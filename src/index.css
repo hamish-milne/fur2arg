@@ -11,9 +11,3 @@
     @slot;
   }
 }
-
-@starting-style {
-  ::picker(select):popover-open {
-    opacity: 0;
-  }
-}

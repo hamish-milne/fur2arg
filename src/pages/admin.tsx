@@ -1,11 +1,29 @@
-import type { Duration, DurationUnit } from "date-fns";
-import { api, useApiBulkAction, useApiGet, type AuthScope } from "../hooks";
+import { set, type Duration, type DurationUnit } from "date-fns";
+import {
+  api,
+  invalidate,
+  useApiBulkAction,
+  useApiGet,
+  type AuthScope,
+} from "../hooks";
 import { Overlay } from "../components/overlay";
 import { intervalToDuration } from "date-fns/intervalToDuration";
 import { Table } from "../components/table";
-import { Checkbox, LoadingButton, Select } from "../components/input";
-import { useCallback, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import {
+  Button,
+  Checkbox,
+  Dialog,
+  LoadingButton,
+  Select,
+} from "../components/input";
+import { useCallback, useId, useMemo, useState } from "react";
+import { useForm, type UseFormReturn } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { useScanner } from "../components/scanner";
+import {
+  useDialogControlled,
+  useDialogUncontrolled,
+} from "../components/hooks";
 
 const formatDuration = new Intl.RelativeTimeFormat(window.navigator.language);
 
@@ -36,14 +54,16 @@ function formatDateRelative(date: string) {
 
 const ClientColumns = ["select", "id", "scope", "created", "modified"] as const;
 
+type ClientForm = { scope?: AuthScope; selected?: string[] };
+
 function Clients(props: { visible: boolean }) {
   const { visible } = props;
+  const queryClient = useQueryClient();
 
-  const form = useForm<{ scope?: AuthScope; selected?: string[] }>({
+  const form = useForm<ClientForm>({
     mode: "onSubmit",
     reValidateMode: "onSubmit",
   });
-  console.log(form.formState);
 
   const { data: clients } = useApiGet(api.clients.all, undefined, {
     enabled: visible,
@@ -52,7 +72,12 @@ function Clients(props: { visible: boolean }) {
 
   const { mutate: doUpdate, isPending: updatePending } = useApiBulkAction(
     api.client[":id"],
-    "$patch"
+    "$patch",
+    {
+      onSuccess() {
+        invalidate(queryClient, api.clients.all);
+      },
+    }
   );
   const { mutate: doDelete, isPending: deletePending } = useApiBulkAction(
     api.client[":id"],
@@ -61,17 +86,22 @@ function Clients(props: { visible: boolean }) {
   const isPending = updatePending || deletePending;
 
   const selected = form.watch("selected");
-  const disabled = selected?.length === 0;
+  const disabled = !selected || selected.length === 0;
+
+  const labelId = useId();
 
   return (
     <Table
       rows={clients?.data || []}
       columns={ClientColumns}
       rowKey="id"
+      aria-labelledby={labelId}
       caption={useMemo(
         () => (
           <div className="w-full flex items-center gap-2 text-start pl-2">
-            <div className="flex-1">Clients</div>
+            <div className="flex-1" id={labelId}>
+              Clients
+            </div>
             <Select
               disabled={disabled}
               options={["admin", "room-start"]}
@@ -96,7 +126,7 @@ function Clients(props: { visible: boolean }) {
             </LoadingButton>
           </div>
         ),
-        [form, disabled, isPending]
+        [form, disabled, isPending, labelId]
       )}
       Head={useCallback(
         ({ column }) => {
@@ -191,12 +221,36 @@ function Players(props: { visible: boolean }) {
 export function Admin(props: { visible: boolean }) {
   const { visible } = props;
 
+  const [serialNo, setSerialNo] = useState<string | null>(null);
+
+  const [open, setOpen, dialogRef] = useDialogControlled();
+  const { startScan, scanState } = useScanner({
+    onScan: useCallback((serialNo) => {
+      setSerialNo(serialNo);
+      setOpen(true);
+    }, []),
+  });
+
   return (
-    <Overlay visible={visible}>
-      <div className="max-w-3xl flex flex-col gap-4 items-center">
+    <Overlay visible={visible} className="">
+      <div className="max-w-3xl flex flex-col gap-4 items-center p-2">
         <Clients visible={visible} />
         <Players visible={visible} />
+        <LoadingButton
+          onClick={() => startScan()}
+          loading={scanState === "pending"}
+          disabled={["success", "pending", "unavailable"].includes(scanState)}
+        >
+          Start scanning ({scanState})
+        </LoadingButton>
+        <LoadingButton onClick={() => setOpen(true)} loading={open}>
+          Open Dialog
+        </LoadingButton>
       </div>
+      <Dialog ref={dialogRef}>
+        <p>{serialNo}</p>
+        <Button onClick={() => setOpen(false)}>Close</Button>
+      </Dialog>
     </Overlay>
   );
 }

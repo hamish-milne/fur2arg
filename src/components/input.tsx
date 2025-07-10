@@ -14,7 +14,8 @@ export function Input(props: ComponentProps<"input">) {
 const focusStyles =
   "outline-2 outline-transparent focus-visible:outline-gray-800";
 
-const optionStyles = "[&::checkmark]:hidden px-2";
+const optionStyles =
+  "[&::checkmark]:hidden px-2 hover:bg-gray-200 transition-all";
 
 export const isMobileDevice = /Mobi/i.test(window.navigator.userAgent);
 
@@ -62,7 +63,7 @@ export function Select<T extends string>(
         // Default picker styles
         "select-picker:mt-1 select-picker:rounded-md select-picker:border select-picker:border-gray-300",
         // Popover transition for the picker. Note that this requires the `@starting-style` defined in index.css
-        "select-picker:opacity-0 open:select-picker:opacity-100 select-picker:transition-all select-picker:transition-discrete",
+        "select-picker:opacity-0 starting:open:select-picker:opacity-0 open:select-picker:opacity-100 select-picker:transition-all select-picker:transition-discrete",
         focusStyles,
         className
       )}
@@ -198,12 +199,12 @@ export function Checkbox(props: ComponentProps<"input"> & { size?: number }) {
         "checked:hover:bg-blue-600 checked:hover:ring-blue-600",
         "transition-all before:transition-all outline-offset-1",
         // This forces the checkmark icon to be monochromatic
-        "before:content-['✔️'] before:text-transparent before:text-shadow-[0_0_0_white]",
+        "font-serif before:content-['✔'] before:font-bold before:text-transparent before:text-shadow-[0_0_0_white]",
         // This is the size of the checkmark icon. We have to use the --checkbox-size variable
         // because font-size cannot scale to the size of the parent element.
-        "before:text-[calc(var(--checkbox-size)*0.75)]",
+        "before:text-(--checkbox-size)",
         // This positions the checkmark icon in the center of the checkbox
-        "before:absolute before:left-[calc(0.5px-3%)] before:top-[calc(0px-16%)]",
+        "before:absolute before:m-[-20%_10%]",
         "before:opacity-0 checked:before:opacity-100",
         focusStyles,
         className
@@ -220,6 +221,27 @@ export function CircularProgress(props: ComponentProps<"div">) {
       className={clsx(
         "size-4 animate-spin transition-all",
         "rounded-full border-4 border-t-transparent border-blue-500",
+        className
+      )}
+    />
+  );
+}
+
+export function Dialog(props: ComponentProps<"dialog">) {
+  const { className, ...rest } = props;
+  return (
+    <dialog
+      {...rest}
+      className={clsx(
+        "fixed top-1/2 left-1/2 -translate-1/2",
+        "bg-white rounded-lg shadow-lg p-4",
+        "border border-gray-300",
+        "backdrop:bg-gray-500/50",
+        "transition-all transition-discrete duration-300",
+        "backdrop:transition-all backdrop:transition-discrete backdrop:duration-300",
+        "backdrop:opacity-0 opacity-0 translate-y-4",
+        "starting:open:backdrop:opacity-0 starting:open:opacity-0 starting:open:translate-y-4",
+        "open:backdrop:opacity-100 open:opacity-100 open:translate-y-0",
         className
       )}
     />

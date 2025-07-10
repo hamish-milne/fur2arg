@@ -1692,10 +1692,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/w3c-web-nfc@npm:^1.0.4":
+  version: 1.0.4
+  resolution: "@types/w3c-web-nfc@npm:1.0.4"
+  checksum: 10c0/f32f0b4085196fbb8b78fd7323cf7cdc41f03bb6dbf33f88ed0116633f8c68f308ca1b0929a81523a81f4f19be45c7a6c87705495be0d5d41faae364a2270abe
+  languageName: node
+  linkType: hard
+
 "@ungap/structured-clone@npm:^1.0.0":
   version: 1.3.0
   resolution: "@ungap/structured-clone@npm:1.3.0"
   checksum: 10c0/0fc3097c2540ada1fc340ee56d58d96b5b536a2a0dab6e3ec17d4bfc8c4c86db345f61a375a8185f9da96f01c69678f836a2b57eeaa9e4b8eeafd26428e57b0a
+  languageName: node
+  linkType: hard
+
+"@vitejs/plugin-basic-ssl@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "@vitejs/plugin-basic-ssl@npm:2.1.0"
+  peerDependencies:
+    vite: ^6.0.0 || ^7.0.0
+  checksum: 10c0/aa618be6bd915163aba27b2db780eab2f0e5d800fea48795f638fb6c1d098db8008ba7f84c708dc191159efecf6ec4e0191ebc5bb7a1a31779c01d0252bf56b0
   languageName: node
   linkType: hard
 
@@ -2772,6 +2788,8 @@ __metadata:
     "@types/pnpapi": "npm:^0.0.5"
     "@types/react": "npm:^19.1.8"
     "@types/react-dom": "npm:^19.1.6"
+    "@types/w3c-web-nfc": "npm:^1.0.4"
+    "@vitejs/plugin-basic-ssl": "npm:^2.1.0"
     "@vitejs/plugin-react-swc": "npm:^3.10.2"
     "@yarnpkg/sdks": "npm:^3.2.2"
     clsx: "npm:^2.1.1"

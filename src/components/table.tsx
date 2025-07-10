@@ -1,18 +1,37 @@
-import type { ReactNode } from "react";
+import clsx from "clsx";
+import { useId, type ComponentProps, type ReactNode } from "react";
 
-export function Table<TRow, TCol extends string>(props: {
-  rowKey: keyof TRow;
-  rows: readonly TRow[];
-  columns: readonly [TCol, ...TCol[]];
-  caption?: ReactNode;
-  Head(props: { column: TCol }): ReactNode;
-  Cell(props: { row: TRow; column: TCol }): ReactNode;
-  empty: ReactNode;
-}) {
-  const { rowKey, rows, columns, caption, Head, Cell, empty } = props;
+export function Table<TRow, TCol extends string>(
+  props: {
+    rowKey: keyof TRow;
+    rows: readonly TRow[];
+    columns: readonly [TCol, ...TCol[]];
+    Head(props: { column: TCol }): ReactNode;
+    Cell(props: { row: TRow; column: TCol }): ReactNode;
+    empty: ReactNode;
+    caption?: ReactNode;
+  } & ComponentProps<"table">
+) {
+  const {
+    rowKey,
+    rows,
+    columns,
+    Head,
+    Cell,
+    empty,
+    caption,
+    className,
+    ...rest
+  } = props;
 
   return (
-    <table className="table-auto border-collapse border border-gray-300">
+    <table
+      {...rest}
+      className={clsx(
+        "table-auto border-collapse border border-gray-300",
+        className
+      )}
+    >
       {caption && (
         <caption className="text-lg font-semibold mb-2 caption-top">
           {caption}
