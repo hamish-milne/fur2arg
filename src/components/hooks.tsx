@@ -25,7 +25,7 @@ export function useDialogUncontrolled(type?: OpenType) {
   const ref = useRef<HTMLDialogElement>(null);
   const open = ref.current?.open || false;
   const setOpen = (value: boolean) => setDialogOpen(ref, value, type);
-  return [open, setOpen, ref] as const;
+  return [open, setOpen, { ref }] as const;
 }
 
 export function useDialogControlled(type?: OpenType) {
@@ -33,5 +33,5 @@ export function useDialogControlled(type?: OpenType) {
   const [open, setOpen] = useState(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies(type): 'type' is only used imperatively
   useEffect(() => setDialogOpen(ref, open, type), [open]);
-  return [open, setOpen, ref] as const;
+  return [open, setOpen, { ref, onClose: () => setOpen(false) }] as const;
 }

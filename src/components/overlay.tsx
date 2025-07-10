@@ -7,7 +7,7 @@ export function Overlay(props: { visible: boolean } & ComponentProps<"div">) {
   return (
     <div
       className={clsx(
-        "absolute top-0 left-0 min-h-full min-w-full flex items-center justify-center data-[visible=false]:opacity-0 transition-opacity duration-500 overflow-scroll",
+        "absolute top-0 left-0 min-h-full min-w-full flex items-center justify-center data-[visible=false]:opacity-0 transition-opacity duration-500",
         className
       )}
       data-visible={visible}

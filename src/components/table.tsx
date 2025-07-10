@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useId, type ComponentProps, type ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 export function Table<TRow, TCol extends string>(
   props: {

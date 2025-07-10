@@ -1,10 +1,14 @@
-import { set, type Duration, type DurationUnit } from "date-fns";
+import type { Duration, DurationUnit } from "date-fns";
 import {
   api,
   invalidate,
   useApiBulkAction,
   useApiGet,
+  type AnyRoute,
   type AuthScope,
+  type BulkData,
+  type Method,
+  type Route,
 } from "../hooks";
 import { Overlay } from "../components/overlay";
 import { intervalToDuration } from "date-fns/intervalToDuration";
@@ -16,14 +20,18 @@ import {
   LoadingButton,
   Select,
 } from "../components/input";
-import { useCallback, useId, useMemo, useState } from "react";
-import { useForm, type UseFormReturn } from "react-hook-form";
+import {
+  useCallback,
+  useId,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
+import { useForm, useWatch, type UseFormReturn } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useScanner } from "../components/scanner";
-import {
-  useDialogControlled,
-  useDialogUncontrolled,
-} from "../components/hooks";
+import { useDialogControlled } from "../components/hooks";
 
 const formatDuration = new Intl.RelativeTimeFormat(window.navigator.language);
 
@@ -56,9 +64,140 @@ const ClientColumns = ["select", "id", "scope", "created", "modified"] as const;
 
 type ClientForm = { scope?: AuthScope; selected?: string[] };
 
+function UpdateClientsButton(props: { form: UseFormReturn<ClientForm> }) {
+  const { form } = props;
+  const { selected = [], scope } = useWatch({
+    control: form.control,
+  });
+
+  return (
+    <UpdateButton
+      disabled={!selected || selected.length === 0 || !scope}
+      mutation={api.client[":id"]}
+      method="$patch"
+      toInvalidate={api.clients.all}
+      dialogContent={
+        <p>
+          Assign{" "}
+          {selected.length === 1 ? selected[0] : `${selected.length} clients`}{" "}
+          to the <strong>{scope}</strong> scope?
+        </p>
+      }
+      getData={() =>
+        scope
+          ? selected.map((id) => ({
+              param: { id },
+              json: { scope },
+            }))
+          : []
+      }
+      className="text-base font-normal"
+    >
+      Update
+    </UpdateButton>
+  );
+}
+
+function DeleteClientsButton(props: { form: UseFormReturn<ClientForm> }) {
+  const { form } = props;
+  const { selected = [] } = useWatch({
+    control: form.control,
+  });
+
+  return (
+    <UpdateButton
+      disabled={selected.length === 0}
+      mutation={api.client[":id"]}
+      method="$delete"
+      toInvalidate={api.clients.all}
+      dialogContent={
+        <p>
+          Are you sure you want to delete{" "}
+          {selected.length === 1 ? selected[0] : `${selected.length} clients`}?
+        </p>
+      }
+      getData={() =>
+        selected.map((id) => ({
+          param: { id },
+          json: undefined,
+        }))
+      }
+      className="text-base font-normal bg-red-500 hover:bg-red-600"
+    >
+      Delete
+    </UpdateButton>
+  );
+}
+
+function UpdateButton<TMethod extends Method, TRoute extends Route<TMethod>>(
+  props: {
+    disabled?: boolean;
+    mutation: TRoute;
+    method: TMethod;
+    toInvalidate: AnyRoute;
+    getData: () => BulkData<TMethod, TRoute>;
+    dialogContent: ReactNode;
+  } & ComponentProps<typeof Button>
+) {
+  const {
+    disabled,
+    mutation,
+    method,
+    toInvalidate,
+    getData,
+    dialogContent,
+    ...rest
+  } = props;
+  const queryClient = useQueryClient();
+  const [_open, setOpen, dialogProps] = useDialogControlled();
+  const { mutate, isPending } = useApiBulkAction(mutation, method, {
+    onSuccess() {
+      invalidate(queryClient, toInvalidate);
+    },
+    onSettled() {
+      setOpen(false);
+    },
+    onError(error) {
+      console.error(error);
+    },
+  });
+
+  return (
+    <>
+      <Button disabled={disabled} onClick={() => setOpen(true)} {...rest} />
+
+      <Dialog
+        className="text-base font-normal flex flex-col gap-2"
+        {...dialogProps}
+      >
+        {dialogContent}
+        <div className="flex items-stretch justify-end gap-2 w-full">
+          <LoadingButton
+            disabled={disabled || isPending}
+            loading={isPending}
+            onClick={() => {
+              if (disabled) {
+                return;
+              }
+              mutate(getData());
+            }}
+          >
+            Apply
+          </LoadingButton>
+          <Button
+            onClick={() => setOpen(false)}
+            className="bg-white hover:bg-white text-red-500! inset-ring-1 inset-ring-red-500 hover:inset-ring-2"
+          >
+            Cancel
+          </Button>
+        </div>
+      </Dialog>
+    </>
+  );
+}
+
 function Clients(props: { visible: boolean }) {
   const { visible } = props;
-  const queryClient = useQueryClient();
 
   const form = useForm<ClientForm>({
     mode: "onSubmit",
@@ -67,25 +206,16 @@ function Clients(props: { visible: boolean }) {
 
   const { data: clients } = useApiGet(api.clients.all, undefined, {
     enabled: visible,
-    // refetchInterval: 5000,
+    refetchInterval: 5000,
   });
 
-  const { mutate: doUpdate, isPending: updatePending } = useApiBulkAction(
-    api.client[":id"],
-    "$patch",
-    {
-      onSuccess() {
-        invalidate(queryClient, api.clients.all);
-      },
-    }
-  );
   const { mutate: doDelete, isPending: deletePending } = useApiBulkAction(
     api.client[":id"],
     "$delete"
   );
-  const isPending = updatePending || deletePending;
+  const isPending = deletePending;
 
-  const selected = form.watch("selected");
+  const { selected = [], scope } = form.watch();
   const disabled = !selected || selected.length === 0;
 
   const labelId = useId();
@@ -108,25 +238,12 @@ function Clients(props: { visible: boolean }) {
               className="text-base font-normal flex-1 max-w-3xl"
               {...form.register("scope")}
             />
-            <LoadingButton
-              disabled={disabled}
-              loading={isPending}
-              className="text-base font-normal"
-              onClick={() => {
-                console.log(form.getValues().selected?.join(","));
-              }}
-            >
-              Update
-            </LoadingButton>
-            <LoadingButton
-              disabled={disabled}
-              className="text-base font-normal bg-red-500 hover:bg-red-600"
-            >
-              Delete
-            </LoadingButton>
+
+            <UpdateClientsButton form={form} />
+            <DeleteClientsButton form={form} />
           </div>
         ),
-        [form, disabled, isPending, labelId]
+        [form, disabled, labelId]
       )}
       Head={useCallback(
         ({ column }) => {
@@ -223,7 +340,7 @@ export function Admin(props: { visible: boolean }) {
 
   const [serialNo, setSerialNo] = useState<string | null>(null);
 
-  const [open, setOpen, dialogRef] = useDialogControlled();
+  const [open, setOpen, dialogProps] = useDialogControlled();
   const { startScan, scanState } = useScanner({
     onScan: useCallback((serialNo) => {
       setSerialNo(serialNo);
@@ -241,13 +358,10 @@ export function Admin(props: { visible: boolean }) {
           loading={scanState === "pending"}
           disabled={["success", "pending", "unavailable"].includes(scanState)}
         >
-          Start scanning ({scanState})
-        </LoadingButton>
-        <LoadingButton onClick={() => setOpen(true)} loading={open}>
-          Open Dialog
+          Start scanning
         </LoadingButton>
       </div>
-      <Dialog ref={dialogRef}>
+      <Dialog {...dialogProps}>
         <p>{serialNo}</p>
         <Button onClick={() => setOpen(false)}>Close</Button>
       </Dialog>

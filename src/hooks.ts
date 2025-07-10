@@ -66,11 +66,11 @@ export function useApiGet<
   });
 }
 
-export function invalidate<
-  TRoute extends {
-    $url: (args: TAny) => URL;
-  },
->(
+export interface AnyRoute {
+  $url: (args: TAny) => URL;
+}
+
+export function invalidate<TRoute extends AnyRoute>(
   queryClient: QueryClient,
   route: TRoute,
   param?: RouteTypes<"$get", TRoute>["param"],
@@ -80,11 +80,15 @@ export function invalidate<
   });
 }
 
+export type Method = "$patch" | "$post" | "$put" | "$delete";
+
+export type Route<TMethod extends Method> = AnyRoute & {
+  [_ in TMethod]: (args: TAny) => Promise<{ json(): Promise<unknown> }>;
+};
+
 export function useApiAction<
-  TMethod extends "$patch" | "$post" | "$put" | "$delete",
-  TRoute extends {
-    $url: (args: TAny) => URL;
-  } & { [_ in TMethod]: (args: TAny) => Promise<{ json(): Promise<unknown> }> },
+  TMethod extends Method,
+  TRoute extends Route<TMethod>,
 >(
   route: TRoute,
   method: TMethod,
@@ -108,11 +112,14 @@ export function useApiAction<
   });
 }
 
+export type BulkData<
+  TMethod extends Method,
+  TRoute extends Route<TMethod>,
+> = Pick<RouteTypes<TMethod, TRoute>, "param" | "json">[];
+
 export function useApiBulkAction<
-  TMethod extends "$patch" | "$post" | "$put" | "$delete",
-  TRoute extends {
-    $url: (args: TAny) => URL;
-  } & { [_ in TMethod]: (args: TAny) => Promise<{ json(): Promise<unknown> }> },
+  TMethod extends Method,
+  TRoute extends Route<TMethod>,
 >(
   route: TRoute,
   method: TMethod,
@@ -120,7 +127,7 @@ export function useApiBulkAction<
     UseMutationOptions<
       RouteTypes<TMethod, TRoute>["response"][],
       Error,
-      Pick<RouteTypes<TMethod, TRoute>, "param" | "json">[]
+      BulkData<TMethod, TRoute>
     >,
     "mutationFn" | "mutationKey"
   >,

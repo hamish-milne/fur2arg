@@ -13,6 +13,11 @@ export default defineConfig({
     tailwindcss(),
     react(),
     cloudflare(),
-    basicSsl(),
+    // basicSsl(),
   ],
+  server: {
+    hmr: {
+      overlay: false,
+    },
+  },
 });
