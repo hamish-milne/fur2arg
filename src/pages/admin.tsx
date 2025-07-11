@@ -85,6 +85,7 @@ function UpdateClientsButton(props: { form: UseFormReturn<ClientForm> }) {
 
   return (
     <UpdateButton
+      formObj={form}
       disabled={selectedArray.length === 0 || !scope}
       mutation={api.client[":id"]}
       method="$patch"
@@ -122,6 +123,7 @@ function DeleteClientsButton(props: { form: UseFormReturn<ClientForm> }) {
 
   return (
     <UpdateButton
+      formObj={form}
       disabled={selectedArray.length === 0}
       mutation={api.client[":id"]}
       method="$delete"
@@ -150,6 +152,7 @@ function DeleteClientsButton(props: { form: UseFormReturn<ClientForm> }) {
 
 function UpdateButton<TMethod extends Method, TRoute extends Route<TMethod>>(
   props: {
+    formObj: UseFormReturn<ClientForm>;
     disabled?: boolean;
     mutation: TRoute;
     method: TMethod;
@@ -159,6 +162,7 @@ function UpdateButton<TMethod extends Method, TRoute extends Route<TMethod>>(
   } & ComponentProps<typeof Button>
 ) {
   const {
+    formObj,
     disabled,
     mutation,
     method,
@@ -175,6 +179,7 @@ function UpdateButton<TMethod extends Method, TRoute extends Route<TMethod>>(
     },
     onSettled() {
       setOpen(false);
+      formObj.resetField("selected");
     },
     onError(error) {
       console.error(error);
