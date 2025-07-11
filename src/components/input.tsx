@@ -55,15 +55,15 @@ export function Select<T extends string>(
         // For unsupported browsers this will fall back to the default select appearance
         "[appearance:base-select]",
         // For mobile devices, we use the native picker
-        !isMobileDevice && "select-picker:[appearance:base-select]",
+        !isMobileDevice && "[&::picker(select)]:[appearance:base-select]",
         // Draw the picker icon
-        "picker-icon:[content:'▼'] picker-icon:text-xs picker-icon:flex picker-icon:items-center picker-icon:text-gray-600",
+        "[&::picker-icon]:[content:'▼'] [&::picker-icon]:text-xs [&::picker-icon]:flex [&::picker-icon]:items-center [&::picker-icon]:text-gray-600",
         // Rotate the picker icon when the select is open
-        "picker-icon:transition-all picker-icon:duration-300 [&:open::picker-icon]:rotate-180",
+        "[&::picker-icon]:transition-all [&::picker-icon]:duration-300 [&:open::picker-icon]:rotate-180",
         // Default picker styles
-        "select-picker:mt-1 select-picker:rounded-md select-picker:border select-picker:border-gray-300",
+        "[&::picker(select)]:mt-1 [&::picker(select)]:rounded-md [&::picker(select)]:border [&::picker(select)]:border-gray-300",
         // Popover transition for the picker. Note that this requires the `@starting-style` defined in index.css
-        "select-picker:opacity-0 starting:open:select-picker:opacity-0 open:select-picker:opacity-100 select-picker:transition-all select-picker:transition-discrete",
+        "[&::picker(select)]:opacity-0 starting:open:[&::picker(select)]:opacity-0 open:[&::picker(select)]:opacity-100 [&::picker(select)]:transition-all [&::picker(select)]:transition-discrete",
         focusStyles,
         className
       )}
@@ -242,6 +242,25 @@ export function Dialog(props: ComponentProps<"dialog">) {
         "backdrop:opacity-0 opacity-0 translate-y-4",
         "starting:open:backdrop:opacity-0 starting:open:opacity-0 starting:open:translate-y-4",
         "open:backdrop:opacity-100 open:opacity-100 open:translate-y-0",
+        className
+      )}
+    />
+  );
+}
+
+export function Toast(props: ComponentProps<"dialog">) {
+  const { className, ...rest } = props;
+  return (
+    <dialog
+      {...rest}
+      className={clsx(
+        "fixed bottom-4 right-4",
+        "bg-white rounded-lg shadow-lg p-4",
+        "border border-gray-300",
+        "transition-all transition-discrete duration-300",
+        "opacity-0 translate-y-4",
+        "starting:open:opacity-0 starting:open:translate-y-4",
+        "open:opacity-100 open:translate-y-0",
         className
       )}
     />

@@ -1,13 +1,1 @@
 @import "tailwindcss";
-
-@custom-variant picker-icon {
-  &::picker-icon {
-    @slot;
-  }
-}
-
-@custom-variant select-picker {
-  &::picker(select) {
-    @slot;
-  }
-}

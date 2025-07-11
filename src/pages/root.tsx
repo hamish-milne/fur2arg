@@ -3,7 +3,9 @@ import { Admin } from "./admin";
 import { Register } from "./register";
 
 export function Root() {
-  const { data: auth } = useApiGet(api.clients.me, undefined, {});
+  const { data: auth } = useApiGet(api.clients.me, undefined, {
+    refetchInterval: 5000,
+  });
 
   const { id, scope } = auth && "data" in auth ? auth.data : {};
 

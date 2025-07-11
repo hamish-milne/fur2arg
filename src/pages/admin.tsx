@@ -62,30 +62,45 @@ function formatDateRelative(date: string) {
 
 const ClientColumns = ["select", "id", "scope", "created", "modified"] as const;
 
-type ClientForm = { scope?: AuthScope; selected?: string[] };
+type ClientForm = { scope?: AuthScope; selected?: string[] | string | boolean };
+
+function normalizeCheckboxArray<T extends string>(
+  value: T[] | T | boolean | null | undefined
+): T[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    return [value];
+  }
+  return [];
+}
 
 function UpdateClientsButton(props: { form: UseFormReturn<ClientForm> }) {
   const { form } = props;
-  const { selected = [], scope } = useWatch({
+  const { selected, scope } = useWatch({
     control: form.control,
   });
+  const selectedArray = normalizeCheckboxArray(selected);
 
   return (
     <UpdateButton
-      disabled={!selected || selected.length === 0 || !scope}
+      disabled={selectedArray.length === 0 || !scope}
       mutation={api.client[":id"]}
       method="$patch"
       toInvalidate={api.clients.all}
       dialogContent={
         <p>
           Assign{" "}
-          {selected.length === 1 ? selected[0] : `${selected.length} clients`}{" "}
+          {selectedArray.length === 1
+            ? selectedArray[0]
+            : `${selectedArray.length} clients`}{" "}
           to the <strong>{scope}</strong> scope?
         </p>
       }
       getData={() =>
         scope
-          ? selected.map((id) => ({
+          ? selectedArray.map((id) => ({
               param: { id },
               json: { scope },
             }))
@@ -100,24 +115,28 @@ function UpdateClientsButton(props: { form: UseFormReturn<ClientForm> }) {
 
 function DeleteClientsButton(props: { form: UseFormReturn<ClientForm> }) {
   const { form } = props;
-  const { selected = [] } = useWatch({
+  const { selected } = useWatch({
     control: form.control,
   });
+  const selectedArray = normalizeCheckboxArray(selected);
 
   return (
     <UpdateButton
-      disabled={selected.length === 0}
+      disabled={selectedArray.length === 0}
       mutation={api.client[":id"]}
       method="$delete"
       toInvalidate={api.clients.all}
       dialogContent={
         <p>
           Are you sure you want to delete{" "}
-          {selected.length === 1 ? selected[0] : `${selected.length} clients`}?
+          {selectedArray.length === 1
+            ? selectedArray[0]
+            : `${selectedArray.length} clients`}
+          ?
         </p>
       }
       getData={() =>
-        selected.map((id) => ({
+        selectedArray.map((id) => ({
           param: { id },
           json: undefined,
         }))
@@ -215,8 +234,9 @@ function Clients(props: { visible: boolean }) {
   );
   const isPending = deletePending;
 
-  const { selected = [], scope } = form.watch();
-  const disabled = !selected || selected.length === 0;
+  const { selected, scope } = form.watch();
+  const selectedArray = normalizeCheckboxArray(selected);
+  const disabled = selectedArray.length === 0;
 
   const labelId = useId();
 
