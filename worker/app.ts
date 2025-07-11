@@ -22,7 +22,9 @@ export interface Client {
 const uuidPattern =
   /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/;
 
-const idPattern = /^[A-Z]{4}$/;
+const clientIdPattern = /^[A-Z]{4}$/;
+
+const playerIdPattern = /^[A-F0-9]{6}$/;
 
 type CEnv = {
   Bindings: {
@@ -101,7 +103,7 @@ function generateClientId(): string {
 
 const clientIdValidator = validator("param", (input: { id: string }, c) => {
   const { id } = input;
-  if (!idPattern.test(id)) {
+  if (!clientIdPattern.test(id)) {
     return c.json({ error: "Invalid client ID" }, { status: 400 });
   }
   return input;
@@ -109,7 +111,7 @@ const clientIdValidator = validator("param", (input: { id: string }, c) => {
 
 const playerIdValidator = validator("param", (input: { id: string }, c) => {
   const { id } = input;
-  if (!uuidPattern.test(id)) {
+  if (!playerIdPattern.test(id)) {
     return c.json({ error: "Invalid player ID" }, { status: 400 });
   }
   return input;
@@ -142,7 +144,23 @@ const getClientById = `SELECT id, scope, ${sqlDate("created")}, ${sqlDate("modif
 
 const getPlayers = `SELECT id, ${sqlDate("created")}, ${sqlDate("modified")} FROM players ORDER BY modified DESC`;
 
-const getPlayerById = `SELECT id, ${sqlDate("created")}, ${sqlDate("modified")} json(state) AS state FROM players WHERE id = ?1`;
+const getPlayerById = `SELECT id, ${sqlDate("created")}, ${sqlDate("modified")}, json(state) AS state FROM players WHERE id = ?1`;
+
+function getPlayer(c: Context<CEnv>, id: string) {
+  const cursor = c.env.sql.exec<Omit<Player, "state"> & { state: string }>(
+    getPlayerById,
+    id,
+  );
+  if (cursor.rowsRead === 0) {
+    return c.json({ error: "Player not found" }, { status: 404 });
+  }
+  const player = cursor.one();
+  const data: Player = {
+    ...player,
+    state: JSON.parse(player.state),
+  };
+  return c.json({ data: data });
+}
 
 // NOTE: All response data must be cast to a fixed-structure type without an index signature,
 // so no Pick<,> or Omit<,> or the like.
@@ -230,38 +248,16 @@ export const app = new Hono<CEnv>()
     return c.json({ data });
   })
   .get("/player/:id", authClient, playerIdValidator, (c) => {
-    const cursor = c.env.sql.exec<Omit<Player, "state"> & { state: string }>(
-      getPlayerById,
-      c.req.valid("param").id,
-    );
-    if (cursor.rowsRead === 0) {
-      return c.json({ error: "Player not found" }, { status: 404 });
-    }
-    const player = cursor.one();
-    const data: Player = {
-      ...player,
-      state: JSON.parse(player.state),
-    };
-    return c.json({ data: data });
+    return getPlayer(c, c.req.valid("param").id);
   })
-  .post(
-    "/player/:id",
-    authClient,
-    playerIdValidator,
-    playerBodyValidator,
-    async (c) => {
-      const { state } = c.req.valid("json");
-      const cursor = c.env.sql.exec(
-        "INSERT INTO players (id, state) VALUES (?1, jsonb(?2))",
-        c.req.valid("param").id,
-        JSON.stringify(state),
-      );
-      if (cursor.rowsWritten === 0) {
-        return c.json({ error: "Unable to create player" }, { status: 500 });
-      }
-      return c.json({ success: true });
-    },
-  )
+  .get("/player/:id/register", authClient, playerIdValidator, async (c) => {
+    const { id } = c.req.valid("param");
+    c.env.sql.exec(
+      "INSERT INTO players (id) VALUES (?1) ON CONFLICT DO NOTHING",
+      id,
+    );
+    return getPlayer(c, id);
+  })
   .patch(
     "/player/:id",
     authClient,

@@ -329,7 +329,7 @@ function Players(props: { visible: boolean }) {
   const { visible } = props;
   const playersList = useApiGet(api.players.all, undefined, {
     enabled: visible,
-    // refetchInterval: 5000,
+    refetchInterval: 5000,
   });
   return (
     <Table
@@ -350,6 +350,7 @@ function Players(props: { visible: boolean }) {
       Cell={({ row, column }) => {
         switch (column) {
           case "id":
+            return row[column];
           case "created":
           case "modified":
             return formatDateRelative(row[column]);
