@@ -233,7 +233,7 @@ export function Dialog(props: ComponentProps<"dialog">) {
     <dialog
       {...rest}
       className={clsx(
-        "fixed top-1/2 left-1/2 -translate-1/2",
+        "not-open:hidden fixed top-1/2 left-1/2 -translate-1/2",
         "bg-white rounded-lg shadow-lg p-4",
         "border border-gray-300",
         "backdrop:bg-gray-500/50",

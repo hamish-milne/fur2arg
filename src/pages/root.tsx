@@ -11,7 +11,7 @@ export function Root() {
     <div className="h-full w-full relative">
       <Register code={id || ""} visible={Boolean(id && !scope)} />
       <Admin visible={Boolean(scope === "admin")} />
-      <div className="absolute bottom-0 left-0">{id || "No ID"}</div>
+      <div className="fixed bottom-2 left-2">{id || "No ID"}</div>
     </div>
   );
 }
