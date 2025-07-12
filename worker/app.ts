@@ -1,7 +1,7 @@
-import { Hono, type Context, type Next } from "hono";
+import { DurableObject } from "cloudflare:workers";
+import { type Context, Hono, type Next } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { validator } from "hono/validator";
-import { DurableObject } from "cloudflare:workers";
 
 export type AuthScope = "admin" | `room-${string}`;
 

@@ -1,5 +1,5 @@
-import type { ReactNode, ComponentProps } from "react";
 import { clsx } from "clsx/lite";
+import type { ComponentProps, ReactNode } from "react";
 
 export function Input(props: ComponentProps<"input">) {
   const { className, ...rest } = props;

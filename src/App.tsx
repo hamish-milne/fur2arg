@@ -1,5 +1,5 @@
-import { useRef } from "react";
 import DiceBox from "@3d-dice/dice-box";
+import { useRef } from "react";
 import Story from "./story.mdx";
 
 function App2() {

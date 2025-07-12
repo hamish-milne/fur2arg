@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { LoadingButton } from "../components/input";
+import { Overlay } from "../components/overlay";
 import { useScanner } from "../components/scanner";
 import type { AuthScope } from "../hooks";
-import { LoadingButton } from "../components/input";
 import { RoomStart } from "./room-start";
-import { Overlay } from "../components/overlay";
 
 export function RoomWrapper(props: { scope: AuthScope | null }) {
   const { scope } = props;

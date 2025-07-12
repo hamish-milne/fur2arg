@@ -3,7 +3,7 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-  "$schema": ".yarn/unplugged/wrangler-virtual-670a52ec49/node_modules/wrangler/config-schema.json",
+  "$schema": ".yarn/unplugged/wrangler-virtual-fe1df4978c/node_modules/wrangler/config-schema.json",
   "name": "fur2arg",
   "main": "worker/index.ts",
   "compatibility_date": "2025-06-04",

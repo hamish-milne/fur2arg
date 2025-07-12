@@ -1,13 +1,14 @@
 import {
   type QueryClient,
-  useMutation,
-  useQuery,
   type UseMutationOptions,
   type UseQueryOptions,
+  useMutation,
+  useQuery,
 } from "@tanstack/react-query";
 import { hc } from "hono/client";
 import type { app } from "../worker/app";
-export type { AuthScope, Player, Client } from "../worker/app";
+
+export type { AuthScope, Client, Player } from "../worker/app";
 
 // We need to put a baseUrl here, then strip it out at the end, so that the $url method works.
 export const api = hc<typeof app>("https://localhost/", {
@@ -22,10 +23,10 @@ export const api = hc<typeof app>("https://localhost/", {
   },
 }).api;
 
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+// biome-ignore lint/suspicious/noExplicitAny: Using 'unknown' for the arguments doesn't work here.
 type TAny = any;
 
-// biome-ignore lint/suspicious/noConfusingVoidType: <explanation>
+// biome-ignore lint/suspicious/noConfusingVoidType: Using 'void' allows omitting the 'param' and 'json' properties in the route types.
 type TVoid = void;
 
 type RouteParam<TArgs> = TArgs extends { param: Record<infer TParam, string> }

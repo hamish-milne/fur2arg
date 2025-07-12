@@ -4,11 +4,11 @@ import { Checkbox } from "../components/input";
 import { Table } from "../components/table";
 import { api, useApiGet } from "../hooks";
 import {
+  type AdminForm,
   CheckboxSelectAll,
   formatDateRelative,
   normalizeCheckboxArray,
   UpdateButton,
-  type AdminForm,
 } from "./admin";
 
 function PlayersHeader(props: { form: UseFormReturn<AdminForm> }) {
@@ -19,34 +19,32 @@ function PlayersHeader(props: { form: UseFormReturn<AdminForm> }) {
   });
   const selectedArray = normalizeCheckboxArray(players);
   return (
-    <>
-      <UpdateButton
-        formObj={form}
-        resetField="players"
-        disabled={selectedArray.length === 0}
-        mutation={api.player[":id"]}
-        method="$delete"
-        toInvalidate={api.players.all}
-        dialogContent={
-          <p>
-            Are you sure you want to delete{" "}
-            {selectedArray.length === 1
-              ? selectedArray[0]
-              : `${selectedArray.length} players`}
-            ?
-          </p>
-        }
-        getData={() =>
-          selectedArray.map((id) => ({
-            param: { id },
-            json: undefined,
-          }))
-        }
-        className="text-base font-normal bg-red-500 hover:bg-red-600"
-      >
-        Delete
-      </UpdateButton>
-    </>
+    <UpdateButton
+      formObj={form}
+      resetField="players"
+      disabled={selectedArray.length === 0}
+      mutation={api.player[":id"]}
+      method="$delete"
+      toInvalidate={api.players.all}
+      dialogContent={
+        <p>
+          Are you sure you want to delete{" "}
+          {selectedArray.length === 1
+            ? selectedArray[0]
+            : `${selectedArray.length} players`}
+          ?
+        </p>
+      }
+      getData={() =>
+        selectedArray.map((id) => ({
+          param: { id },
+          json: undefined,
+        }))
+      }
+      className="text-base font-normal bg-red-500 hover:bg-red-600"
+    >
+      Delete
+    </UpdateButton>
   );
 }
 

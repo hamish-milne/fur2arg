@@ -1,14 +1,14 @@
 import { useId } from "react";
 import { type UseFormReturn, useWatch } from "react-hook-form";
-import { Select, Checkbox } from "../components/input";
+import { Checkbox, Select } from "../components/input";
 import { Table } from "../components/table";
 import { api, useApiGet } from "../hooks";
 import {
+  type AdminForm,
   CheckboxSelectAll,
   formatDateRelative,
   normalizeCheckboxArray,
   UpdateButton,
-  type AdminForm,
 } from "./admin";
 
 function ClientsHeader(props: { form: UseFormReturn<AdminForm> }) {

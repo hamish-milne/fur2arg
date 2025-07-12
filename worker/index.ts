@@ -1,4 +1,5 @@
 export { AppDO } from "./app";
+
 import { env } from "cloudflare:workers";
 
 const DO_ID = env.APP.idFromName("singleton");

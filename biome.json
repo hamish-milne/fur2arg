@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -21,22 +21,21 @@
       }
     }
   },
-  "organizeImports": {
-    "enabled": true
-  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "files": {
-    "ignore": [
-      ".pnp*",
-      "node_modules",
-      "dist",
-      ".yarn",
-      "worker-configuration.d.ts",
-      ".vscode/extensions.json"
+    "includes": [
+      "**",
+      "!**/.pnp*",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.yarn",
+      "!**/worker-configuration.d.ts",
+      "!**/.vscode/extensions.json"
     ]
   },
   "overrides": [
     {
-      "include": ["tsconfig.*.json"],
+      "includes": ["**/tsconfig.*.json"],
       "json": {
         "parser": {
           "allowComments": true,

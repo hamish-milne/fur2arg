@@ -3,6 +3,9 @@
     "wrangler.json": "jsonc"
   },
   "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports.biome": "explicit"
+  },
   "editor.defaultFormatter": "biomejs.biome",
   "search.exclude": {
     "**/.yarn": true,
