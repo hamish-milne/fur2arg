@@ -137,8 +137,9 @@ export function LoadingButton(
         "relative before:inline-block before:absolute before:aspect-square",
         "before:top-1/2 before:left-1/2 before:-translate-1/2",
         // Make the spinner invisible when not loading:
-        "before:transition-all before:duration-300",
+        "before:transition-all before:transition-discrete before:duration-300",
         "data-loading:text-transparent not-data-loading:before:h-0 not-data-loading:before:opacity-0",
+        "starting:data-loading:before:h-0 starting:data-loading:before:opacity-0 not-data-loading:before:hidden",
         className
       )}
     />
@@ -193,19 +194,21 @@ export function Checkbox(props: ComponentProps<"input"> & { size?: number }) {
       className={clsx(
         "relative size-(--checkbox-size)",
         "cursor-pointer disabled:cursor-not-allowed",
-        "appearance-none ring-gray-500 ring-2 rounded hover:bg-gray-200",
+        "appearance-none ring-gray-500 ring-2 outline-offset-1 rounded hover:bg-gray-200 font-serif",
         "disabled:bg-gray-300 disabled:ring-gray-400",
-        "checked:bg-blue-500 checked:ring-blue-500",
-        "checked:hover:bg-blue-600 checked:hover:ring-blue-600",
-        "transition-all before:transition-all outline-offset-1",
-        // This forces the checkmark icon to be monochromatic
-        "font-serif before:content-['✔'] before:font-bold before:text-transparent before:text-shadow-[0_0_0_white]",
+        "not-disabled:[:checked,:indeterminate]:bg-blue-500 not-disabled:[:checked,:indeterminate]:ring-blue-500",
+        "not-disabled:[:checked,:indeterminate]:hover:bg-blue-600 not-disabled:[:checked,:indeterminate]:hover:ring-blue-600",
+        "transition-all before:transition-all after:transition-all",
+        "before:content-['✔'] before:font-bold before:text-white",
+        "after:content-['⚊'] after:font-bold after:text-white",
         // This is the size of the checkmark icon. We have to use the --checkbox-size variable
         // because font-size cannot scale to the size of the parent element.
-        "before:text-(--checkbox-size)",
+        "before:text-(--checkbox-size) after:text-(--checkbox-size)",
         // This positions the checkmark icon in the center of the checkbox
         "before:absolute before:m-[-20%_10%]",
+        "after:absolute after:m-[-20%_7%]",
         "before:opacity-0 checked:before:opacity-100",
+        "after:opacity-0 indeterminate:after:opacity-100",
         focusStyles,
         className
       )}

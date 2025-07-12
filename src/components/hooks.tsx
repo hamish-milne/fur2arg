@@ -35,3 +35,14 @@ export function useDialogControlled(type?: OpenType) {
   useEffect(() => setDialogOpen(ref, open, type), [open]);
   return [open, setOpen, { ref, onClose: () => setOpen(false) }] as const;
 }
+
+export function useCheckboxIndeterminate(indeterminate: boolean) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const { current: checkbox } = ref;
+    if (checkbox) {
+      checkbox.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+  return ref;
+}
