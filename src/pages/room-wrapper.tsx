@@ -10,7 +10,7 @@ export function RoomWrapper(props: { scope: AuthScope | null }) {
   const [playerId, setPlayerId] = useState("");
   const { startScan, scanState } = useScanner({
     onScan(serialNo) {
-      setPlayerId(serialNo.replaceAll(":", "").substring(0, 6).toUpperCase());
+      setPlayerId(serialNo.replaceAll(":", "").substring(0, 6));
     },
   });
   const loading = scanState === "pending";

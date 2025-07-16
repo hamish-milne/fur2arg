@@ -24,7 +24,7 @@ const uuidPattern =
 
 const clientIdPattern = /^[A-Z]{4}$/;
 
-const playerIdPattern = /^[A-F0-9]{6}$/;
+const playerIdPattern = /^[a-f0-9]{6}$/;
 
 type CEnv = {
   Bindings: {
